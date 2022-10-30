@@ -1,0 +1,243 @@
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: CRUD sample
+  description: This is a very simple CRUD sample.
+servers:
+  - url: http://localhost:80
+    description: local
+paths:
+  /messages:
+    post:
+      description: register a message
+      operationId: registerMessage
+      tags: 
+        - message
+      requestBody:
+        $ref: '#/components/requestBodies/requestMessage'
+      responses:
+        "200":
+          $ref: '#/components/responses/success'
+        "405":
+          $ref: '#/components/responses/notAllowedMethod'  
+        "500":
+          $ref: '#/components/responses/internalServerError'
+  /messages/{id}:
+    get:
+      description: get a message
+      operationId: getMessage
+      tags:
+        - message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: message id
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        "200":
+          $ref: '#/components/responses/getMessage'
+        "400":
+          $ref: '#/components/responses/badRequest'
+        "404":
+          $ref: '#/components/responses/notFound'
+        "405":
+          $ref: '#/components/responses/notAllowedMethod'
+        "500":
+          $ref: '#/components/responses/internalServerError'
+    delete:
+      description: delete a message
+      operationId: deleteMessage
+      tags:
+        - message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: message id
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        "200":
+          $ref: '#/components/responses/success'
+        "400":
+          $ref: '#/components/responses/badRequest'
+        "404":
+          $ref: '#/components/responses/notFound'
+        "405":
+          $ref: '#/components/responses/notAllowedMethod'
+        "500":
+          $ref: '#/components/responses/internalServerError'
+  /health/liveness:
+    get:
+      description: health check liveness
+      operationId: getHealthLiveness
+      tags:
+        - system
+      responses:
+        '200':
+          $ref: '#/components/responses/success'
+  /health/readiness:
+    get:
+      description: health check readiness
+      operationId: getHealthReadiness
+      tags:
+        - system
+      responses:
+        '200':
+          $ref: '#/components/responses/success'        
+components:
+  requestBodies:
+    requestMessage:
+      description: message
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/requestRegisterMessage'
+  responses:
+    getMessage:
+      description: get message
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/responseGetMessage'
+    success:
+      description: '200'
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/responseSuccess'
+    badRequest:
+      description: '400'
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/responseBadRequest'
+    notFound:
+      description: '404'
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/responseNotFound'
+    notAllowedMethod:
+      description: '405'
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/responseNotAllowedMethod'
+    internalServerError:
+      description: '500'
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/responseInternalServerError'
+  schemas:
+    requestRegisterMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          description: message
+          example: Hello world.
+      required:
+        - message
+    responseGetMessage:
+      description: get message
+      type: object
+      properties:
+        message:
+          description: message
+          type: string
+          example: Hellow world.
+      required:
+        - message
+    responseSuccess:
+      description: Success
+      type: object
+      properties:
+        status:
+          description: status
+          type: integer
+          format: int16
+          example: 200
+        message:
+          description: message
+          type: string
+          example: 'success'
+      required:
+        - status
+        - message
+    responseBadRequest:
+      description: Bad Reqeust
+      type: object
+      properties:
+        status:
+          description: status
+          type: integer
+          format: int16
+          example: 400
+        message:
+          description: message
+          type: string
+          example: 'Bad Request'
+      required:
+        - status
+        - message
+    responseNotFound:
+      description: Not Found
+      type: object
+      properties:
+        status:
+          description: status
+          type: integer
+          format: int16
+          example: 404
+        message:
+          description: message
+          type: string
+          example: 'Not Found'
+      required:
+        - status
+        - message
+    responseNotAllowedMethod:
+      description: Not Allowed Method
+      type: object
+      properties:
+        status:
+          description: status
+          type: integer
+          format: int16
+          example: 405
+        message:
+          description: message
+          type: string
+          example: 'Not Allowed Method Error'
+      required:
+        - status
+        - message
+    responseInternalServerError:
+      description: Internal Server Error
+      type: object
+      properties:
+        status:
+          description: status
+          type: integer
+          format: int16
+          example: 500
+        message:
+          description: message
+          type: string
+          example: 'Internal Server Error'
+      required:
+        - status
+        - message
+tags:
+  - name: message
+    description: message
+  - name: system
+    description: system operation

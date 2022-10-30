@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: application layer resources
+Resources:
+  PracticeECSCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: PracticeFargateCluster
+  PracticeEcsTaskExecRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: practice-ecs-task-exec-role-policy
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+  PracticeEcsTaskRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: practice-ecs-task-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+  PracticeTaskRolePolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: PracticeECSTaskRolePolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 'rds:*'
+            Resource: '*'
+      Roles:
+        - !Ref PracticeEcsTaskRole
+  PracticeECSLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub "/ecs/logs/ecs-group"
+  PracticeEcsTaskDefinition:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      Family: practice-ecs-task
+      Cpu: 256
+      Memory: 512
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !Ref PracticeEcsTaskExecRole
+      TaskRoleArn: !Ref PracticeEcsTaskRole
+      RequiresCompatibilities: 
+        - FARGATE
+      ContainerDefinitions:
+        - Name: practice-ecs-container
+          Image: 030816431860.dkr.ecr.ap-northeast-1.amazonaws.com/cfn-practice-repository:latest
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              # awslogs-create-group: true
+              awslogs-group: !Ref PracticeECSLogGroup
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: practice
+          PortMappings:
+            - HostPort: 80
+              Protocol: tcp
+              ContainerPort: 80
+          Environment:
+            - Name: DB_NAME
+              Value: practicedb
+            - Name: DB_USER
+              Value: backend
+            - Name: DB_PORT
+              Value: 3306
+            - Name: TZ
+              Value: Asia/Tokyo
+          Secrets:
+            - Name: DB_HOST
+              ValueFrom: cfn-practice-db-host
+            - Name: DB_PASSWORD
+              ValueFrom: cfn-practice-db-password
+  PracticeEcsService:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: !Ref PracticeECSCluster
+      DesiredCount: 2
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      PlatformVersion: 1.3.0
+      LoadBalancers:
+        - TargetGroupArn: !ImportValue PracticeALBTargetGroup
+          ContainerPort: 80
+          ContainerName: practice-ecs-container
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref AppSecurityGroup
+          Subnets:
+            - !ImportValue PracticePrivateSubnet1
+            - !ImportValue PracticePrivateSubnet2
+      ServiceName: practice-ecs-service
+      TaskDefinition: !Ref PracticeEcsTaskDefinition
+  AppSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable access to the Application host
+      VpcId: !ImportValue PracticeVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: !ImportValue VPCCIDRBlock
