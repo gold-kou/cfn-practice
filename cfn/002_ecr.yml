@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ecr resources
+Resources: 
+  PracticeRepository:
+    Type: 'AWS::ECR::Repository'
+    Properties:
+      RepositoryName: cfn-practice-repository
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+            {
+              "rules": [
+                {
+                  "rulePriority": 1,
+                  "description": "Keep last 30 release tagged images",
+                  "selection": {
+                    "tagStatus": "tagged",
+                    "tagPrefixList": ["release"],
+                    "countType": "imageCountMoreThan",
+                    "countNumber": 30
+                  },
+                  "action": {
+                    "type": "expire"
+                  }
+                }
+              ]
+            }
+        RegistryId: !Ref 'AWS::AccountId'

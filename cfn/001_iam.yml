@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: iam resources
+Resources:
+  IAMGroupCfnPracticeAdmin:
+    Type: 'AWS::IAM::Group'
+    DeletionPolicy: Retain
+    Properties:
+      GroupName: !Join 
+        - ''
+        - - admin-group-
+          - !Ref 'AWS::AccountId'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+  IAMUserCfnPracticeAdmin:
+    Type: 'AWS::IAM::User'
+    DeletionPolicy: Retain
+    Properties:
+      UserName: !Join 
+        - ''
+        - - admin-user-
+          - !Ref 'AWS::AccountId'
+      Groups:
+        - !Join 
+          - ''
+          - - admin-group-
+            - !Ref 'AWS::AccountId'
+Outputs:
+  UserName:
+    Description: Information about User name
+    Value: !Ref IAMUserCfnPracticeAdmin
+  PasswordSettingURL:
+    Description: Please create a password at the URL
+    Value: !Join 
+      - ''
+      - - 'https://'
+        - console.aws.amazon.com/iam/home?region=
+        - !Ref 'AWS::Region'
+        - '#/users/'
+        - !Ref IAMUserCfnPracticeAdmin
+        - '?section=security_credentials'
+  LoginURL:
+    Description: Information about console login URL
+    Value: !Join 
+      - ''
+      - - 'https://'
+        - !Ref 'AWS::AccountId'
+        - .signin.aws.amazon.com/console

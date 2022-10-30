@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'RDS template'
+Resources: 
+  PracticeRDS: 
+    Type: "AWS::RDS::DBInstance"
+    Properties:
+      DBInstanceIdentifier: praticedb
+      Engine: MySQL
+      EngineVersion: 8.0.23
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      StorageType: gp2
+      DBName: practicedb
+      MasterUsername: admin
+      MasterUserPassword: overwritten_password
+      DBSubnetGroupName: !Ref PracticeDBSubnetGroup
+      PubliclyAccessible: false
+      MultiAZ: true
+      PreferredBackupWindow: "09:10-09:40"
+      PreferredMaintenanceWindow: "sat:19:00-sat:19:30"
+      AutoMinorVersionUpgrade: false
+      DBParameterGroupName: !Ref PracticeDBParameterGroup  
+      VPCSecurityGroups:
+        - !Ref PracticeRDSSecurityGroup
+      CopyTagsToSnapshot: true
+      BackupRetentionPeriod: 7
+    DeletionPolicy: "Delete"
+  PracticeDBParameterGroup:
+    Type: "AWS::RDS::DBParameterGroup"
+    Properties:
+      Family: mysql8.0
+      Description: "db parameter group"
+  PracticeRDSSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId: !ImportValue PracticeVPC
+      GroupDescription: "rds security group"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !ImportValue VPCCIDRBlock
+  PracticeDBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+      DBSubnetGroupDescription: "db subnet group"
+      SubnetIds: 
+        - !ImportValue PracticePrivateSubnet1
+        - !ImportValue PracticePrivateSubnet2
+Outputs: 
+  DBInstanceEndpoint:
+    Value: !GetAtt PracticeRDS.Endpoint.Address

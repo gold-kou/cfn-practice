@@ -1,0 +1,41 @@
+version: "3.8"
+services:
+  cfn-practice-app:
+    build:
+      context: .
+      target: debugger
+    environment:
+      - DB_NAME=practicedb
+      - DB_USER=dbuser
+      - DB_PASSWORD=secret
+      - DB_HOST=cfn-practice-db
+      - DB_PORT=3306
+      - TZ=Asia/Tokyo
+    networks:
+      - backend
+    ports:
+      - 80:80
+    depends_on:
+      - cfn-practice-db
+  cfn-practice-db:
+    image: mysql/mysql-server:8.0.23
+    volumes:
+      - ./sql/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./sql/mysql/entrypoint:/docker-entrypoint-initdb.d
+      - cfn-practice-db:/var/lib/mysql
+    tmpfs:
+      - /var/lib/mysql,mode=755
+      - /var/log/mysql,mode=755
+    environment:
+      - MYSQL_DATABASE=practicedb
+      - MYSQL_USER=dbuser
+      - MYSQL_PASSWORD=secret
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - 3306:3306
+    networks:
+      - backend
+networks:
+  backend:
+volumes:
+  cfn-practice-db:

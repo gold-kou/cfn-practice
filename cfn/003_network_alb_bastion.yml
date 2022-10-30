@@ -1,0 +1,329 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: network layer resources
+Mappings:
+  SubnetConfig:
+    VPC:
+      CIDR: 10.0.0.0/16
+    Public1:
+      CIDR: 10.0.1.0/24
+    Public2:
+      CIDR: 10.0.2.0/24
+    Private1:
+      CIDR: 10.0.65.0/24
+    Private2:
+      CIDR: 10.0.66.0/24
+Resources:
+  PracticeVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      CidrBlock: !FindInMap 
+        - SubnetConfig
+        - VPC
+        - CIDR
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackName'
+        - Key: Network
+          Value: Public
+  PracticePublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ''
+      CidrBlock: !FindInMap 
+        - SubnetConfig
+        - Public1
+        - CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackName'
+        - Key: Network
+          Value: Public
+  PracticePublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ''
+      CidrBlock: !FindInMap 
+        - SubnetConfig
+        - Public2
+        - CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackName'
+        - Key: Network
+          Value: Public
+  PracticeInternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackName'
+        - Key: Network
+          Value: Public
+  PracticeGatewayToInternet:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      InternetGatewayId: !Ref PracticeInternetGateway
+  PublicRouteTable1:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackName'
+        - Key: Network
+          Value: Public
+  PublicRouteTable2:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackName'
+        - Key: Network
+          Value: Public
+  PublicRoute1:
+    Type: 'AWS::EC2::Route'
+    DependsOn: PracticeGatewayToInternet
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref PracticeInternetGateway
+  PublicRoute2:
+    Type: 'AWS::EC2::Route'
+    DependsOn: PracticeGatewayToInternet
+    Properties:
+      RouteTableId: !Ref PublicRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref PracticeInternetGateway
+  PublicSubnetRouteTableAssociation1:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PracticePublicSubnet1
+      RouteTableId: !Ref PublicRouteTable1
+  PublicSubnetRouteTableAssociation2:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PracticePublicSubnet2
+      RouteTableId: !Ref PublicRouteTable2
+  PracticePrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ''
+      CidrBlock: !FindInMap 
+        - SubnetConfig
+        - Private1
+        - CIDR
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Network
+          Value: Private
+  PracticePrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ''
+      CidrBlock: !FindInMap 
+        - SubnetConfig
+        - Private2
+        - CIDR
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Network
+          Value: Private
+  PrivateRouteTable1:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Network
+          Value: Private
+  PrivateRouteTable2:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Network
+          Value: Private
+  PrivateSubnetRouteTableAssociation1:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PracticePrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+  PrivateSubnetRouteTableAssociation2:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PracticePrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+  PrivateRoute1:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway1
+  PrivateRoute2:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway2
+  NATGateway1:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt 
+        - NATGatewayEIP1
+        - AllocationId
+      SubnetId: !Ref PracticePublicSubnet1
+  NATGateway2:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt 
+        - NATGatewayEIP2
+        - AllocationId
+      SubnetId: !Ref PracticePublicSubnet2
+  NATGatewayEIP1:
+    Type: 'AWS::EC2::EIP'
+    DependsOn: PracticeGatewayToInternet
+    Properties:
+      Domain: vpc
+  NATGatewayEIP2:
+    Type: 'AWS::EC2::EIP'
+    DependsOn: PracticeGatewayToInternet
+    Properties:
+      Domain: vpc
+  PracticeApplicationLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    DependsOn: PracticeGatewayToInternet
+    Properties:
+      Subnets:
+        - !Ref PracticePublicSubnet1
+        - !Ref PracticePublicSubnet2 
+      SecurityGroups:
+        - !Ref PracticeECSSecurityGroup
+  PracticeECSSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: ECS Security Group
+      VpcId: !Ref PracticeVPC
+  PracticeSecurityGroupHTTPinbound:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref PracticeECSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      CidrIp: 0.0.0.0/0
+  PracticeALBListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PracticeALBTargetGroup
+      LoadBalancerArn: !Ref PracticeApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+  PracticeALBTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      VpcId: !Ref PracticeVPC
+      TargetType: ip # ECSのタスク定義でawsvpcネットワークを指定しているため
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 2
+      HealthCheckPath: /health/liveness
+      Port: 80
+      Protocol: HTTP
+      Matcher:
+        HttpCode: '200'
+  BastionIPAddress:
+    Type: 'AWS::EC2::EIP'
+    DependsOn: PracticeGatewayToInternet
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref BastionHost
+  BastionHost:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: t3.micro
+      ImageId: ami-0ff21806645c5e492
+      KeyName: !Ref BastionKeyPair
+      SubnetId: !Ref PracticePublicSubnet1
+      UserData:
+        Fn::Base64: |
+              #!/bin/bash
+              sudo yum localinstall https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm -y
+              sudo rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
+              sudo yum install -y mysql-community-client
+      SecurityGroupIds:
+        - !Ref BastionSecurityGroup
+  BastionSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable access to the Bastion host
+      VpcId: !Ref PracticeVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 3.112.23.0/29 # https://ip-ranges.amazonaws.com/ip-ranges.json
+  BastionKeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    Properties:
+      KeyName: BastionKeyPair
+Outputs:
+  PracticeVPC:
+    Description: VPCId of the newly created VPC
+    Value: !Ref PracticeVPC
+    Export: 
+      Name: PracticeVPC
+  VPCCIDRBlock:
+    Description: VPC CIDR block
+    Value: !GetAtt PracticeVPC.CidrBlock
+    Export: 
+      Name: VPCCIDRBlock
+  PracticePublicSubnet1:
+    Description: SubnetId of the public subnet1
+    Value: !Ref PracticePublicSubnet1
+  PracticePublicSubnet2:
+    Description: SubnetId of the public subnet2
+    Value: !Ref PracticePublicSubnet2
+  PracticePrivateSubnet1:
+    Description: SubnetId of the private subnet1
+    Value: !Ref PracticePrivateSubnet1
+    Export: 
+      Name: PracticePrivateSubnet1
+  PracticePrivateSubnet2:
+    Description: SubnetId of the private subnet2
+    Value: !Ref PracticePrivateSubnet2
+    Export: 
+      Name: PracticePrivateSubnet2
+  PracticeALBTargetGroup:
+    Description: ALB Traget Group
+    Value: !Ref PracticeALBTargetGroup
+    Export: 
+      Name: PracticeALBTargetGroup
+  Bastion:
+    Description: IP Address of the Bastion host
+    Value: !Ref BastionIPAddress
