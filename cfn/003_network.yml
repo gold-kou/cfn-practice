@@ -212,86 +212,6 @@ Resources:
     DependsOn: PracticeGatewayToInternet
     Properties:
       Domain: vpc
-  PracticeApplicationLoadBalancer:
-    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
-    DependsOn: PracticeGatewayToInternet
-    Properties:
-      Subnets:
-        - !Ref PracticePublicSubnet1
-        - !Ref PracticePublicSubnet2 
-      SecurityGroups:
-        - !Ref PracticeECSSecurityGroup
-  PracticeECSSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: ECS Security Group
-      VpcId: !Ref PracticeVPC
-  PracticeSecurityGroupHTTPinbound:
-    Type: 'AWS::EC2::SecurityGroupIngress'
-    Properties:
-      GroupId: !Ref PracticeECSSecurityGroup
-      IpProtocol: tcp
-      FromPort: 80
-      ToPort: 80
-      CidrIp: 0.0.0.0/0
-  PracticeALBListener:
-    Type: 'AWS::ElasticLoadBalancingV2::Listener'
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref PracticeALBTargetGroup
-      LoadBalancerArn: !Ref PracticeApplicationLoadBalancer
-      Port: 80
-      Protocol: HTTP
-  PracticeALBTargetGroup:
-    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
-    Properties:
-      VpcId: !Ref PracticeVPC
-      TargetType: ip # ECSのタスク定義でawsvpcネットワークを指定しているため
-      HealthCheckIntervalSeconds: 30
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 3
-      UnhealthyThresholdCount: 2
-      HealthCheckPath: /health/liveness
-      Port: 80
-      Protocol: HTTP
-      Matcher:
-        HttpCode: '200'
-  BastionIPAddress:
-    Type: 'AWS::EC2::EIP'
-    DependsOn: PracticeGatewayToInternet
-    Properties:
-      Domain: vpc
-      InstanceId: !Ref BastionHost
-  BastionHost:
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      InstanceType: t3.micro
-      ImageId: ami-0ff21806645c5e492
-      KeyName: !Ref BastionKeyPair
-      SubnetId: !Ref PracticePublicSubnet1
-      UserData:
-        Fn::Base64: |
-              #!/bin/bash
-              sudo yum localinstall https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm -y
-              sudo rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
-              sudo yum install -y mysql-community-client
-      SecurityGroupIds:
-        - !Ref BastionSecurityGroup
-  BastionSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: Enable access to the Bastion host
-      VpcId: !Ref PracticeVPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          CidrIp: 3.112.23.0/29 # https://ip-ranges.amazonaws.com/ip-ranges.json
-  BastionKeyPair:
-    Type: 'AWS::EC2::KeyPair'
-    Properties:
-      KeyName: BastionKeyPair
 Outputs:
   PracticeVPC:
     Description: VPCId of the newly created VPC
@@ -306,9 +226,13 @@ Outputs:
   PracticePublicSubnet1:
     Description: SubnetId of the public subnet1
     Value: !Ref PracticePublicSubnet1
+    Export: 
+      Name: PracticePublicSubnet1
   PracticePublicSubnet2:
     Description: SubnetId of the public subnet2
     Value: !Ref PracticePublicSubnet2
+    Export: 
+      Name: PracticePublicSubnet2
   PracticePrivateSubnet1:
     Description: SubnetId of the private subnet1
     Value: !Ref PracticePrivateSubnet1
@@ -318,12 +242,4 @@ Outputs:
     Description: SubnetId of the private subnet2
     Value: !Ref PracticePrivateSubnet2
     Export: 
-      Name: PracticePrivateSubnet2
-  PracticeALBTargetGroup:
-    Description: ALB Traget Group
-    Value: !Ref PracticeALBTargetGroup
-    Export: 
-      Name: PracticeALBTargetGroup
-  Bastion:
-    Description: IP Address of the Bastion host
-    Value: !Ref BastionIPAddress
+      Name: PracticePrivateSubnet2 

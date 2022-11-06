@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ALB resources
+Resources:
+  PracticeApplicationLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    DependsOn: PracticeGatewayToInternet
+    Properties:
+      Subnets:
+        - !ImportValue PracticePublicSubnet1
+        - !ImportValue PracticePublicSubnet2 
+      SecurityGroups:
+        - !Ref PracticeECSSecurityGroup  
+  PracticeALBListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PracticeALBTargetGroup
+      LoadBalancerArn: !Ref PracticeApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+  PracticeALBTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      VpcId: !ImportValue PracticeVPC
+      TargetType: ip # ECSのタスク定義でawsvpcネットワークを指定しているため
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 2
+      HealthCheckPath: /health/liveness
+      Port: 80
+      Protocol: HTTP
+      Matcher:
+        HttpCode: '200'
+  PracticeECSSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: ECS Security Group
+      VpcId: !Ref PracticeVPC
+  PracticeSecurityGroupHTTPinbound:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref PracticeECSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      CidrIp: 0.0.0.0/0
+Outputs:
+  PracticeALBTargetGroup:
+    Description: ALB Traget Group
+    Value: !Ref PracticeALBTargetGroup
+    Export: 
+      Name: PracticeALBTargetGroup
+        
